@@ -6,9 +6,14 @@ const MongoStore = require("connect-mongo")(session);
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const path = require("path");
+const passport = require("passport");
+const logger = require("morgan");
+
 require('dotenv').config()
 
 const port = process.env.PORT;
+
+app.use(logger("dev"));
 
 mongoose.connect(
  process.env.MONGODB_URI,
@@ -18,6 +23,8 @@ mongoose.connect(
   else console.log("connected to mongodb");
  }
 )
+
+require('./server/modules/passport')(passport);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -53,7 +60,7 @@ if (process.env.NODE_ENV === "development") {
 
 app.use(cors());
 
-app.use("/api", require("./server/routes/api"));
+app.use("/api/v1", require("./server/routes/api/v1"));
 app.use(require("./server/routes/index"));
 
 app.listen(port, () => {

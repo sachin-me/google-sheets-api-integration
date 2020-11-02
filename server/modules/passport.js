@@ -1,25 +1,17 @@
 const mongoose = require('mongoose');
-const User = mongoose.model('User');
-
-// const User = require('../model/User');
 const passport = require('passport');
 const bcrypt = require('bcrypt');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
-// Passport Local Strategy 
-
-// User.find({}, (err, users) => {
-//   console.log(users);
-// })
+const User = require('../models/User');
 
 module.exports = (passport) => {
-  passport.use(new LocalStrategy({
-      usernameField: 'email'
-    },
-    function (email, password, done) {
+  passport.use(new LocalStrategy(
+    function (username, password, done) {
+      console.log(username, 'name in passport modules');
       User.findOne({
-        email: email
+        username: username
       }, function (err, user) {
         if (err) {
           return done(err);

@@ -1,26 +1,26 @@
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const services = require('../services');
 
 module.exports = {
   createUser: (req, res) => {
+    const { name, password } = req.body;
 
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
+    if (!name || !password) {
       return res.json({
-        error: 'Name, Email and Password are mandatory.'
+        error: 'username and Password are mandatory.'
       })
     }
 
-    User.findOne({ email: email }, (err, user) => {
+    User.findOne({ username: name }, (err, user) => {
       if (err) return res.json({
         error: 'Could not find the user'
       })
       if (!user) {
         const newUser = new User({
-          name,
-          email,
+          username: name,
           password
         })
         newUser.save((err, createdUser) => {
@@ -40,56 +40,72 @@ module.exports = {
   },
 
   loginUser: (req, res, next) => {
-    
-    passport.authenticate('local', {
-      session: false
-    }, (err, data, info) => {
-      if (err) return res.json({
-        error: 'Could not login user'
-      })
-      if (!data) return res.json({
-        error: 'No matching user found.'
-      })
-      const id = data._id
-      const { name, email } = data;
-      const token = jwt.sign({
-        id
-      }, 'secret');
+    const { name, password } = req.body;
 
-      res.cookie(
-        "username",
-        name + "," + email,
-        {
+    if (!name || !password) {
+      return res.json({
+        error: 'username and Password are mandatory.'
+      })
+    }
+    try {
+      User.findOne({ username: name }, function (err, user) {
+        if (err) return res.json({
+          error: 'Could not login user'
+        })
+        if (!user) return res.json({
+          error: 'No matching user found.'
+        })
+        if (!bcrypt.compareSync(password, user.password)) {
+          return res.json({
+            error: 'Password does not match.'
+          })
+        }
+
+        const { username, _id } = user;
+        const token = jwt.sign({
+          _id
+        }, 'secret');
+        console.log(token, 'token', user, 'user');
+        res.cookie(
+          "username",
+          username,
+          {
+            expires: new Date(Date.now() + 84000000),
+            httpOnly: true,
+          }
+        );
+  
+        res.cookie("token", token, {
           expires: new Date(Date.now() + 84000000),
           httpOnly: true,
-        }
-      );
-
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 84000000),
-        httpOnly: true,
-      });
-
-      res.json({
-        message: `${name}, Successfully logged in`,
-        token,
-        userInfo: {
-          name,
-					email,
-					id
-        }
+        });
+        
+        res.json({
+          message: `${username}, Successfully logged in`,
+          token,
+          userInfo: {
+            username,
+            _id
+          }
+        })
       })
-    })(req, res, next);
+    } catch (error) {
+      return res.json({
+        error: 'Something went wrong.'
+      })
+    }
   },
 
   // get current login user
   getCurrentUser: async (req, res, next) => {
-    const token = req.cookies.token;
-    if (token) {
+    const token = services.getToken(req, res);
+    
+    if (!!token) {
       const user = jwt.verify(token, 'secret');
-      const { id } = user;
+      const { _id } = user;
+
+      const currentUser = await User.findOne({ _id: _id }).select('-password');
       
-      const currentUser = await User.findOne({ _id: id }).select('-password -boards')
       if (!currentUser) {
         return res.json({
           error: 'No User Found'
