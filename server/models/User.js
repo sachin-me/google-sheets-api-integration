@@ -6,13 +6,8 @@ const saltRounds = 10;
 const Schema = mongoose.Schema;
 let userSchema = new Schema({
   username: {type: String, required: true},
-  email: {type: String},
   password: {type: String, required: true},
-  provider: String,
-  google: {
-    name: String, 
-    photo: String
-  }
+  subscriptions: [{ type: Schema.Types.ObjectId, ref: 'Subscription' }],
 })
 
 userSchema.pre('save', function(next) {

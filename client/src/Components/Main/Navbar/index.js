@@ -32,6 +32,9 @@ class Navbars extends Component {
                   <Profile />
                 </Button>
               </Link>
+              <Link to="/subscription">
+                <Button>Subscription</Button>
+              </Link>
             </Nav>
           ) : (
             <Nav>
